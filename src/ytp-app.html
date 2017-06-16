@@ -1,0 +1,342 @@
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/app-layout/app-drawer/app-drawer.html">
+<link rel="import" href="../bower_components/app-layout/app-drawer-layout/app-drawer-layout.html">
+<link rel="import" href="../bower_components/app-layout/app-header/app-header.html">
+<link rel="import" href="../bower_components/app-layout/app-header-layout/app-header-layout.html">
+<link rel="import" href="../bower_components/app-layout/app-scroll-effects/app-scroll-effects.html">
+<link rel="import" href="../bower_components/app-layout/app-toolbar/app-toolbar.html">
+<link rel="import" href="../bower_components/app-route/app-location.html">
+<link rel="import" href="../bower_components/iron-pages/iron-pages.html">
+<link rel="import" href="../bower_components/iron-selector/iron-selector.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/paper-toast/paper-toast.html">
+<link rel="import" href="ytp-icons.html">
+
+<link rel="lazy-import" href="ytp-home.html">
+<link rel="lazy-import" href="ytp-view404.html">
+
+<script src="../bower_components/redux/index.js"></script>
+<script src="../bower_components/redux-thunk/index.js"></script>
+
+<dom-module id="ytp-app">
+  <template>
+    <style>
+      :host {
+        --app-primary-color: red;
+        --app-secondary-color: black;
+
+        display: block;
+      }
+
+      app-drawer-layout:not([narrow]) [drawer-toggle] {
+        display: none;
+      }
+
+      app-drawer-layout:not([narrow]) [main-title] {
+        visibility: hidden;
+      }
+
+      app-toolbar {
+        color: #fff;
+        background-color: var(--app-primary-color);
+      }
+
+      app-header paper-icon-button {
+        --paper-icon-button-ink-color: white;
+      }
+
+      .drawer-list {
+        margin: 0 20px;
+      }
+
+      .drawer-list a {
+        display: block;
+        padding: 0 16px;
+        text-decoration: none;
+        color: var(--app-secondary-color);
+        line-height: 40px;
+      }
+
+      .drawer-list a.iron-selected {
+        color: black;
+        font-weight: bold;
+      }
+    </style>
+
+    <app-location on-route-changed="_handleRoute"></app-location>
+
+    <app-drawer-layout fullbleed>
+      <!-- Drawer content -->
+      <app-drawer id="drawer" slot="drawer">
+        <app-toolbar>YT Polymer</app-toolbar>
+        <iron-selector selected="[[page]]" attr-for-selected="name" class="drawer-list" role="navigation">
+          <a name="home" href="home">Home</a>
+        </iron-selector>
+      </app-drawer>
+
+      <!-- Main content -->
+      <app-header-layout has-scrolling-region>
+
+        <app-header slot="header" condenses reveals effects="waterfall">
+          <app-toolbar>
+            <paper-icon-button icon="ytp:menu" drawer-toggle></paper-icon-button>
+            <div main-title>YT Polymer</div>
+            <paper-icon-button icon="ytp:{{_loginIcon(signedIn)}}" on-tap="_toggleLogin"></paper-icon-button>
+          </app-toolbar>
+        </app-header>
+
+        <iron-pages selected="[[page]]" attr-for-selected="name" fallback-selection="view404" role="main">
+          <ytp-home name="home" store="[[store]]"></ytp-home>
+          <ytp-view404 name="view404"></ytp-view404>
+        </iron-pages>
+      </app-header-layout>
+    </app-drawer-layout>
+
+    <paper-toast opened="[[toastInfo.showing]]" text="[[toastInfo.text]]" duration="0"></paper-toast>
+
+  </template>
+
+  <script>
+
+    // Store ---------------------
+
+    const store = Redux.createStore((state, action) => {
+      return {
+        currentPage: currentPage(state.currentPage, action),
+        signedIn: signedIn(state.signedIn, action),
+        toastInfo: toastInfo(state.toastInfo, action),
+        user: user(state.user, action),
+        trendingVideos: trendingVideos(state.trendingVideos, action)
+      };
+    }, {}, Redux.applyMiddleware(ReduxThunk.default));
+
+    // Reducers ---------------------
+
+    function currentPage(page, action) {
+      switch (action.type) {
+        case 'CHANGE_PAGE':
+          return action.page;
+        default:
+          return page;
+      }
+    }
+
+    function user(user, action) {
+      switch (action.type) {
+        case 'SET_USER':
+          return action.user;
+        default:
+          return user;
+      }
+    }
+
+    function signedIn(signedIn = false, action) {
+      switch (action.type) {
+        case 'SET_SIGNED_IN':
+          return action.signedIn;
+        default:
+          return signedIn;
+      }
+    }
+
+    function toastInfo(info = {showing: false, text: ''}, action) {
+      switch (action.type) {
+        case 'SHOW_TOAST':
+          return Object.assign({}, info, {
+            showing: true,
+            text: action.text
+          });
+        case 'HIDE_TOAST':
+          return Object.assign({}, info, {
+            showing: false
+          });
+        default:
+          return info;
+      }
+    }
+
+    function trendingVideos(trendingVideos = {}, action) {
+      switch (action.type) {
+        case 'TRENDING_VIDEOS_SET':
+          return Object.assign({}, trendingVideos, {items: action.items});
+        case 'TRENDING_VIDEOS_LOADING_SET':
+          return Object.assign({}, trendingVideos, {loading: action.loading});
+        default:
+          return trendingVideos;
+      }
+    }
+
+    // Action creators ---------------------
+
+    let sdkLoaded;
+    function loadSDK() {
+      return dispatch => {
+        sdkLoaded = new Promise(resolve => {
+          var script = document.createElement('script');
+          script.async = true;
+          script.src = 'https://apis.google.com/js/api.js';
+          document.head.appendChild(script);
+          script.onload = () => {
+            gapi.load('client:auth2', () => {
+              gapi.client.init({
+                discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'],
+                clientId: '249918536085-sfdbm43fnsp7sd0s7gjqvvf9tjel691v.apps.googleusercontent.com',
+                scope: 'https://www.googleapis.com/auth/youtube'
+              }).then(() => {
+                gapi.auth2.getAuthInstance().isSignedIn.listen(s => dispatch(setSignedIn(s)));
+                dispatch(setSignedIn(gapi.auth2.getAuthInstance().isSignedIn.get()));
+                resolve();
+              });
+            });
+          }
+        });
+      }
+    }
+
+    function setSignedIn(signedIn) {
+      return dispatch => {
+        dispatch({ type: 'SET_SIGNED_IN', signedIn });
+        if (signedIn) {
+          gapi.client.youtube.channels.list({'part': 'snippet', 'mine': 'true'}).execute(resp => {
+            const user = resp.items[0].snippet;
+            dispatch(setUser(user));
+            dispatch(showToastFor(`Logged in as ${user.title}.`, 1000));
+          });
+        } else {
+          dispatch(showToastFor(`Logged out.`, 1000));
+          dispatch(setUser(null));
+        }
+      }
+    }
+
+    function showToast(text) {
+      return { type: 'SHOW_TOAST', text };
+    }
+
+    function hideToast() {
+      return { type: 'HIDE_TOAST' };
+    }
+
+    function showToastFor(text, duration) {
+      return dispatch => {
+        dispatch(showToast(text));
+        setTimeout(() => dispatch(hideToast()), duration);
+      }
+    }
+
+    function toggleLogin() {
+      return (dispatch, getState) => {
+        if (window.gapi) {
+          if (getState().signedIn) {
+            gapi.auth2.getAuthInstance().signOut();
+          } else {
+            gapi.auth2.getAuthInstance().signIn();
+          }
+        }
+      }
+    }
+
+    function changeRoute(path) {
+      return (dispatch, getState) => {
+        const state = getState();
+        const parts = path.split('/');
+        const [page] = parts;
+        if (page !== state.page) {
+          dispatch(loadPage(page || 'home'));
+        }
+      }
+    }
+
+    function loadPage(page) {
+      return dispatch => {
+        Polymer.importHref('/src/ytp-' + page + '.html',
+          _ => dispatch(changePage(page)),
+          _ => dispatch(loadPage('404')), true);
+      }
+    }
+
+    function changePage(page) {
+      return { type: 'CHANGE_PAGE', page };
+    }
+
+    function setUser(user) {
+      return { type: 'SET_USER', user };
+    }
+
+    function fetchTrendingVideos() {
+      return (dispatch, getState) => {
+        const v = getState().trendingVideos;
+        if (!v.items && !v.loading) {
+          sdkLoaded.then(_ => {
+            dispatch(setTrendingVideosLoading(true));
+            gapi.client.request({
+             path: '/youtube/v3/videos',
+             params: {
+               chart: 'mostPopular',
+               regionCode: 'US',
+               part: 'snippet,contentDetails,statistics',
+               videoCategoryId: '',
+               maxResults: 30
+             }
+            }).execute(resp => {
+              dispatch(setTrendingVideosLoading(false));
+              dispatch(setTrendingVideos(resp.items));
+            });
+          });
+        }
+      }
+    }
+
+    function setTrendingVideosLoading(loading) {
+      return { type: 'TRENDING_VIDEOS_LOADING_SET', loading }
+    }
+
+    function setTrendingVideos(items) {
+      return { type: 'TRENDING_VIDEOS_SET', items }
+    }
+
+    class MyApp extends Polymer.Element {
+
+      static get is() { return 'ytp-app'; }
+
+      constructor() {
+        super();
+        const update = () => this._update(store.getState());
+        store.subscribe(update);
+        update();
+        store.dispatch(loadSDK());
+      }
+
+      _update(state) {
+        this.signedIn = state.signedIn;
+        this.toastInfo = state.toastInfo;
+        this.page = state.currentPage;
+      }
+
+      _handleRoute(e) {
+        store.dispatch(changeRoute(e.detail.value.path));
+      }
+
+      _loginIcon(signedIn) {
+        return signedIn ? 'person' : 'person-outline';
+      }
+
+      _toggleLogin() {
+        store.dispatch(toggleLogin());
+      }
+
+    }
+
+    window.customElements.define(MyApp.is, MyApp);
+  </script>
+</dom-module>

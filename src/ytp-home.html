@@ -1,0 +1,58 @@
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/polymer/lib/elements/dom-repeat.html">
+<link rel="import" href="../bower_components/paper-spinner/paper-spinner-lite.html">
+
+<dom-module id="ytp-home">
+  <template>
+    <style>
+      :host {
+        display: block;
+        padding: 10px;
+      }
+      .user {
+        font-size: 0.7em;
+        color: gray;
+      }
+    </style>
+
+    <h2>Now trending</h2>
+    <paper-spinner active="[[trendingVideos.loading]]"></paper-spinner>
+    <template is="dom-repeat" items="[[trendingVideos.items]]" as="video">
+      <img src="[[video.snippet.thumbnails.medium.url]]"><br>
+      <div class="user">[[video.snippet.channelTitle]]</div>
+      <div class="title">[[video.snippet.title]]</div>
+    </template>
+
+  </template>
+
+  <script>
+    class MyView1 extends Polymer.Element {
+      static get is() { return 'ytp-home'; }
+
+      constructor() {
+        super();
+        const update = () => this._update(store.getState());
+        store.subscribe(update);
+        update();
+        store.dispatch(fetchTrendingVideos());
+      }
+
+      _update(state) {
+        this.trendingVideos = state.trendingVideos;
+      }
+
+    }
+
+    window.customElements.define(MyView1.is, MyView1);
+  </script>
+</dom-module>

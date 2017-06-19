@@ -18,6 +18,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../bower_components/app-route/app-location.html">
 <link rel="import" href="../bower_components/iron-pages/iron-pages.html">
 <link rel="import" href="../bower_components/iron-selector/iron-selector.html">
+<link rel="import" href="../bower_components/iron-icon/iron-icon.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="../bower_components/paper-toast/paper-toast.html">
 <link rel="import" href="ytp-icons.html">
@@ -71,6 +72,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         color: black;
         font-weight: bold;
       }
+      iron-icon {
+        margin-right: 10px;
+      }
     </style>
 
     <app-location on-route-changed="_handleRoute"></app-location>
@@ -80,8 +84,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <app-drawer id="drawer" slot="drawer">
         <app-toolbar>YT Polymer</app-toolbar>
         <iron-selector selected="[[page]]" attr-for-selected="name" class="drawer-list" role="navigation">
-          <a name="trending" href="trending">Trending</a>
-          <a name="liked" href="liked">Liked Videos</a>
+          <a name="trending" href="trending">
+            <iron-icon icon="ytp:trending-up"></iron-icon>Trending
+          </a>
+          <a name="liked" href="liked">
+            <iron-icon icon="ytp:thumb-up"></iron-icon>Liked Videos
+          </a>
         </iron-selector>
       </app-drawer>
 

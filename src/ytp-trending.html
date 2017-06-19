@@ -46,7 +46,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         const update = () => this._update(store.getState());
         store.subscribe(update);
         update();
-        store.dispatch(fetchTrendingVideos());
       }
 
       _update(state) {

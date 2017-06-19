@@ -235,17 +235,37 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     }
 
     function setSignedIn(signedIn) {
-      return dispatch => {
+      return (dispatch, getState) => {
+        const prevSignedIn = getState().signedIn;
         dispatch({ type: 'SET_SIGNED_IN', signedIn });
         if (signedIn) {
+          dispatch(refreshSignedInState());
           gapi.client.youtube.channels.list({'part': 'snippet', 'mine': 'true'}).execute(resp => {
-            const user = resp.items[0].snippet;
-            dispatch(setUser(user));
-            dispatch(showToastFor(`Logged in as ${user.title}.`, 1000));
+            if (resp.error) {
+              dispatch(showToastFor(resp.error.message, 1000));
+            } else {
+              const user = resp.items[0].snippet;
+              dispatch(setUser(user));
+              dispatch(showToastFor(`Logged in as ${user.title}.`, 1000));
+            }
           });
         } else {
-          dispatch(showToastFor(`Logged out.`, 1000));
-          dispatch(setUser(null));
+          if (prevSignedIn) {
+            dispatch(showToastFor(`Logged out.`, 1000));
+            dispatch(setLikedVideos([]));
+            dispatch(setUser(null));
+          }
+        }
+      }
+    }
+
+    function refreshSignedInState() {
+      return (dispatch, getState) => {
+        const state = getState();
+        switch (state.currentPage) {
+          case 'liked':
+            dispatch(fetchLikedVideos());
+            break;
         }
       }
     }
@@ -282,14 +302,22 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         const state = getState();
         const parts = path.slice(1).split('/');
         const [page] = parts;
-        if (page !== state.page) {
+        if (page !== state.currentPage) {
           dispatch(loadPage(page || 'trending'));
         }
       }
     }
 
     function loadPage(page) {
-      return dispatch => {
+      return (dispatch, getState) => {
+        switch(page) {
+          case 'trending':
+            store.dispatch(fetchTrendingVideos());
+            break;
+          case 'liked':
+            store.dispatch(fetchLikedVideos());
+            break;
+        }
         Polymer.importHref('/src/ytp-' + page + '.html',
           _ => dispatch(changePage(page)),
           _ => dispatch(loadPage('404')), true);
@@ -320,9 +348,13 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                maxResults: 30
              }
             }).execute(resp => {
-              dispatch(setTrendingVideosLoading(false));
-              dispatch(setTrendingVideos(resp.items));
-              resp.items.forEach(v => dispatch(fetchMyRatingForVideo(v.id)));
+              if (resp.error) {
+                dispatch(showToastFor(resp.error.message, 1000));
+              } else {
+                dispatch(setTrendingVideosLoading(false));
+                dispatch(setTrendingVideos(resp.items));
+                resp.items.forEach(v => dispatch(fetchMyRatingForVideo(v.id)));
+              }
             });
           });
         }
@@ -331,8 +363,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     function fetchLikedVideos() {
       return (dispatch, getState) => {
-        const v = getState().likedVideos;
-        if (!v.items && !v.loading) {
+        const state = getState();
+        const v = state.likedVideos;
+        if (state.signedIn && !v.items && !v.loading) {
           sdkLoaded.then(_ => {
             dispatch(setLikedVideosLoading(true));
             gapi.client.request({
@@ -345,9 +378,13 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                maxResults: 30
              }
             }).execute(resp => {
-              dispatch(setLikedVideosLoading(false));
-              dispatch(setLikedVideos(resp.items));
-              resp.items.forEach(v => dispatch(fetchMyRatingForVideo(v.id)));
+              if (resp.error) {
+                dispatch(showToastFor(resp.error.message, 1000));
+              } else {
+                dispatch(setLikedVideosLoading(false));
+                dispatch(setLikedVideos(resp.items));
+                resp.items.forEach(v => dispatch(fetchMyRatingForVideo(v.id)));
+              }
             });
           });
         }
@@ -377,7 +414,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
            id: id
          }
         }).execute(resp => {
-          dispatch(setMyRatingForVideo(id, resp.items[0].rating));
+          if (resp.error) {
+            dispatch(showToastFor(resp.error.message, 1000));
+          } else {
+            dispatch(setMyRatingForVideo(id, resp.items[0].rating));
+          }
         });
       }
     }
@@ -416,8 +457,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
          path: '/youtube/v3/videos/rate',
          params: {id, rating}
         }).execute(resp => {
-          // pessimistic
-          // dispatch(setMyRatingForVideo(id, rating));
+          if (resp && resp.error) {
+            dispatch(showToastFor(resp.error.message, 1000));
+          } else {
+            // pessimistic
+            // dispatch(setMyRatingForVideo(id, rating));
+          }
         });
       }
     }

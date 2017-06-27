@@ -61,23 +61,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         this.signedIn = state.signedIn;
       }
 
-      _updateMyRating(e) {
-        const {id, myRating} = e.model.video;
-        let newRating;
-        if (e.target.icon == 'ytp:thumb-down' && myRating !== 'dislike') {
-          newRating = 'dislike';
-        } else if (e.target.icon == 'ytp:thumb-up' && myRating !== 'like') {
-          newRating = 'like';
-        } else {
-          newRating = 'none';
-        }
-        store.dispatch(updateMyRatingForVideo(id, newRating));
-      }
-
-      _likeClass(myRating, rating) {
-        return myRating == rating ? 'highlight' : '';
-      }
-
       _isLoading(signedIn, loading) {
         return signedIn == null || loading;
       }

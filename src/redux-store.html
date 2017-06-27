@@ -1,0 +1,113 @@
+<link rel="import" href="../bower_components/polymer-redux/polymer-redux.html">
+<script src="../bower_components/redux/index.js"></script>
+<script src="../bower_components/redux-thunk/index.js"></script>
+<script>
+
+
+(function() {
+  'use strict';
+
+  // Store ---------------------
+
+  const store = Redux.createStore((state, action) => {
+    return {
+      currentPage: currentPage(state.currentPage, action),
+      signedIn: signedIn(state.signedIn, action),
+      toastInfo: toastInfo(state.toastInfo, action),
+      user: user(state.user, action),
+      videos: videos(state.videos, action),
+      trendingVideos: trendingVideos(state.trendingVideos, action),
+      likedVideos: likedVideos(state.likedVideos, action)
+    };
+  }, {}, Redux.applyMiddleware(ReduxThunk.default));
+
+  // Reducers ---------------------
+
+  function currentPage(page, action) {
+    switch (action.type) {
+      case 'CHANGE_PAGE':
+        return action.page;
+      default:
+        return page;
+    }
+  }
+
+  function user(user, action) {
+    switch (action.type) {
+      case 'SET_USER':
+        return action.user;
+      default:
+        return user;
+    }
+  }
+
+  function signedIn(signedIn = null, action) {
+    switch (action.type) {
+      case 'SET_SIGNED_IN':
+        return action.signedIn;
+      default:
+        return signedIn;
+    }
+  }
+
+  function toastInfo(info = {showing: false, text: ''}, action) {
+    switch (action.type) {
+      case 'SHOW_TOAST':
+        return {...info, showing: true, text: action.text}
+      case 'HIDE_TOAST':
+        return {...info, showing: false}
+      default:
+        return info;
+    }
+  }
+
+  function videos(videos = {}, action) {
+    switch (action.type) {
+      case 'VIDEOS_ADD':
+        return {...videos, ...action.items};
+      case 'VIDEO_MY_RATING_SET':
+        return {...videos, [action.id]: {...videos[action.id], myRating: action.myRating}}
+      default:
+        return videos;
+    }
+  }
+
+  function trendingVideos(trendingVideos = {}, action) {
+    switch (action.type) {
+      case 'TRENDING_VIDEOS_SET':
+        return {...trendingVideos, items: action.items};
+      case 'TRENDING_VIDEOS_LOADING_SET':
+        return {...trendingVideos, loading: action.loading};
+      default:
+        return trendingVideos;
+    }
+  }
+
+  function likedVideos(likedVideos = {}, action) {
+    switch (action.type) {
+      case 'LIKED_VIDEOS_SET':
+        return {...likedVideos, items: action.items};
+      case 'LIKED_VIDEOS_LOADING_SET':
+        return {...likedVideos, loading: action.loading};
+      case 'VIDEO_MY_RATING_SET':
+        const {items} = likedVideos;
+        const idx = items && items.indexOf(action.id);
+        if (idx >= 0 && action.myRating != 'like') {
+          return {...likedVideos, items: [...items.slice(0,idx), ...items.slice(idx+1)]};
+        } else if (idx < 0 && action.myRating == 'like') {
+          return {...likedVideos, items: items.concat([action.id])};
+        } else {
+          return likedVideos;
+        }
+      default:
+        return likedVideos;
+    }
+  }
+
+  // Export the ReduxMixin
+  window.YtpStore = PolymerRedux(store);
+  window.YtpStore.store = store; // for debugging
+
+})();
+
+</script>

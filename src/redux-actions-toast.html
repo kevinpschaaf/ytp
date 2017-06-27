@@ -1,0 +1,29 @@
+<link rel="import" href="../bower_components/polymer-redux/polymer-redux.html">
+<link rel="import" href="../bower_components/polymer/lib/utils/mixin.html">
+<script>
+
+(function() {
+  'use strict';
+
+  window.YtpToastActions = Polymer.dedupingMixin(superClass => class extends superClass {
+    static get actions() {
+      return {
+        showToast(text) {
+          return { type: 'SHOW_TOAST', text };
+        },
+        hideToast() {
+          return { type: 'HIDE_TOAST' };
+        },
+        showToastFor(text, duration) {
+          return dispatch => {
+            dispatch('showToast', text);
+            setTimeout(_ => dispatch('hideToast', duration));
+          }
+        }
+      };
+    }
+  });
+
+})();
+
+</script>

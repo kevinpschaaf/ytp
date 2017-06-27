@@ -13,6 +13,9 @@
     }
   }
 
+  let authListeners = [];
+  let signedIn = true;
+
   window.gapi = {
     load(x, cb) {
       Promise.resolve().then(cb);
@@ -39,6 +42,11 @@
                   fetchDummy().then(state => cb({items: [{rating: state.videos[req.params.id].rating}]}));
                 }
                 break;
+              case '/youtube/v3/videos/rate':
+                Promise.resolve().then(cb);
+                break;
+              default:
+                console.warn(`unhandled path: ${req.path}`);
             }
           }
         }
@@ -61,8 +69,16 @@
       getAuthInstance() {
         return {
           isSignedIn: {
-            get() { return true; },
-            listen() {}
+            get() { return signedIn; },
+            listen(cb) { authListeners.push(cb); }
+          },
+          signOut() {
+            signedIn = false;
+            Promise.resolve().then(_=>authListeners.forEach(cb => cb(signedIn)));
+          },
+          signIn() {
+            signedIn = true;
+            Promise.resolve().then(_=>authListeners.forEach(cb => cb(signedIn)));
           }
         }
       }

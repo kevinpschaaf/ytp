@@ -12,6 +12,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../bower_components/polymer/lib/elements/dom-repeat.html">
 <link rel="import" href="../bower_components/paper-spinner/paper-spinner-lite.html">
 
+<link rel="import" href="redux-store.html">
+<link rel="import" href="redux-actions-ratings.html">
+
 <dom-module id="ytp-video-card">
   <template>
     <style>
@@ -55,7 +58,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   </template>
 
   <script>
-    class YtpVideoCard extends Polymer.Element {
+    class YtpVideoCard extends YtpRatingsActions(YtpStore(Polymer.Element)) {
       static get is() { return 'ytp-video-card'; }
 
       _updateMyRating(e) {
@@ -68,7 +71,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         } else {
           newRating = 'none';
         }
-        store.dispatch(updateMyRatingForVideo(id, newRating));
+        this.dispatch('updateMyRatingForVideo', id, newRating);
       }
 
       _likeClass(myRating, rating) {

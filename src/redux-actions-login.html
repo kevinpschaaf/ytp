@@ -1,0 +1,28 @@
+<link rel="import" href="../bower_components/polymer-redux/polymer-redux.html">
+<link rel="import" href="../bower_components/polymer/lib/utils/mixin.html">
+<script>
+
+(function() {
+  'use strict';
+
+  window.YtpLoginActions = Polymer.dedupingMixin(superClass => class extends superClass {
+    static get actions() {
+      return {
+        toggleLogin() {
+          return (dispatch, getState) => {
+            if (window.gapi) {
+              if (getState().signedIn) {
+                gapi.auth2.getAuthInstance().signOut();
+              } else {
+                gapi.auth2.getAuthInstance().signIn();
+              }
+            }
+          }
+        }
+      };
+    }
+  });
+
+})();
+
+</script>

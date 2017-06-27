@@ -11,8 +11,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
 <link rel="import" href="../bower_components/polymer/lib/elements/dom-repeat.html">
 <link rel="import" href="../bower_components/paper-spinner/paper-spinner-lite.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
 
 <link rel="import" href="ytp-video-card.html">
+
+<link rel="import" href="redux-store.html">
+<link rel="import" href="redux-actions-login.html">
 
 <dom-module id="ytp-liked">
   <template>
@@ -27,54 +31,50 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       paper-spinner-lite:not([active]) {
         display: none;
       }
+      paper-button {
+        background: white;
+      }
     </style>
 
     <h2>Liked videos</h2>
     <paper-spinner-lite active="[[_isLoading(signedIn, loading)]]"></paper-spinner-lite>
-    <template is="dom-repeat" items="[[videos]]" as="video">
+    <template is="dom-repeat" items="[[likedVideos]]" as="video">
       <ytp-video-card video="[[video]]"></ytp-video-card>
     </template>
 
     <div hidden="[[_shouldHideSignin(signedIn)]]">
       You must be signed in to view your liked videos.<br><br>
-      <paper-button on-tap="_signin">Signin now</paper-button>
+      <paper-button raised on-tap="_signin">Signin now</paper-button>
     </div>
 
   </template>
 
   <script>
-    class YtpLiked extends Polymer.Element {
+    class YtpLiked extends YtpLoginActions(YtpStore(Polymer.Element)) {
       static get is() { return 'ytp-liked'; }
 
-      constructor() {
-        super();
-        const update = () => this._update(store.getState());
-        store.subscribe(update);
-        update();
-      }
-
-      _update(state) {
-        const {items, loading} = state.likedVideos;
-        this.videos = items && items.map(key => state.videos[key]);
-        this.loading = loading;
-        this.signedIn = state.signedIn;
-      }
-
-      _updateMyRating(e) {
-        const {id, myRating} = e.model.video;
-        let newRating;
-        if (e.target.icon == 'ytp:thumb-down' && myRating !== 'dislike') {
-          newRating = 'dislike';
-        } else if (e.target.icon == 'ytp:thumb-up' && myRating !== 'like') {
-          newRating = 'like';
-        } else {
-          newRating = 'none';
+      static get properties() {
+        return {
+          likedIds: {
+            statePath: 'likedVideos.items'
+          },
+          videos: {
+            statePath: 'videos'
+          },
+          likedVideos: {
+            computed: 'computeVideos(videos, likedIds)'
+          },
+          loading: {
+            statePath: 'likedVideos.loading'
+          },
+          signedIn: {
+            statePath: 'signedIn'
+          }
         }
-        store.dispatch(updateMyRatingForVideo(id, newRating));
       }
 
-      _likeClass(myRating, rating) {
-        return myRating == rating ? 'highlight' : '';
+      computeVideos(videos, likedIds) {
+        return videos && likedIds && likedIds.map(id => videos[id]);
       }
 
       _isLoading(signedIn, loading) {
@@ -86,7 +86,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       }
 
       _signin() {
-        store.dispatch(toggleLogin());
+        this.dispatch('toggleLogin');
       }
 
     }

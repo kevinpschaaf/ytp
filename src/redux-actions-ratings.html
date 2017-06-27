@@ -1,0 +1,38 @@
+<link rel="import" href="../bower_components/polymer-redux/polymer-redux.html">
+<link rel="import" href="../bower_components/polymer/lib/utils/mixin.html">
+<script>
+
+(function() {
+  'use strict';
+
+  window.YtpRatingsActions = Polymer.dedupingMixin(superClass => class extends YtpToastActions(superClass) {
+    static get actions() {
+      return {
+        updateMyRatingForVideo(id, rating) {
+          return (dispatch, getState) => {
+            // optimistic
+            dispatch('setMyRatingForVideo', id, rating);
+            gapi.client.request({
+             method: 'POST',
+             path: '/youtube/v3/videos/rate',
+             params: {id, rating}
+            }).execute(resp => {
+              if (resp && resp.error) {
+                dispatch('showToastFor', resp.error.message, 1000);
+              } else {
+                // pessimistic
+                // dispatch('setMyRatingForVideo', id, rating);
+              }
+            });
+          }
+        },
+        setMyRatingForVideo(id, myRating) {
+          return { type: 'VIDEO_MY_RATING_SET', id, myRating}
+        }
+      };
+    }
+  });
+
+})();
+
+</script>

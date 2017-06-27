@@ -14,6 +14,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 <link rel="import" href="ytp-video-card.html">
 
+<link rel="import" href="redux-store.html">
+
 <dom-module id="ytp-trending">
   <template>
     <style>
@@ -31,44 +33,34 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     <h2>Now trending</h2>
     <paper-spinner-lite active="[[loading]]"></paper-spinner-lite>
-    <template is="dom-repeat" items="[[videos]]" as="video">
+    <template is="dom-repeat" items="[[trendingVideos]]" as="video">
       <ytp-video-card video="[[video]]"></ytp-video-card>
     </template>
 
   </template>
 
   <script>
-    class YtpTrending extends Polymer.Element {
+    class YtpTrending extends YtpStore(Polymer.Element) {
       static get is() { return 'ytp-trending'; }
-
-      constructor() {
-        super();
-        const update = () => this._update(store.getState());
-        store.subscribe(update);
-        update();
-      }
-
-      _update(state) {
-        const {items, loading} = state.trendingVideos;
-        this.videos = items && items.map(key => state.videos[key]);
-        this.loading = loading;
-      }
-
-      _updateMyRating(e) {
-        const {id, myRating} = e.model.video;
-        let newRating;
-        if (e.target.icon == 'ytp:thumb-down' && myRating !== 'dislike') {
-          newRating = 'dislike';
-        } else if (e.target.icon == 'ytp:thumb-up' && myRating !== 'like') {
-          newRating = 'like';
-        } else {
-          newRating = 'none';
+      static get properties() {
+        return {
+          trendingIds: {
+            statePath: 'trendingVideos.items'
+          },
+          videos: {
+            statePath: 'videos'
+          },
+          trendingVideos: {
+            computed: 'computeVideos(videos, trendingIds)'
+          },
+          loading: {
+            statePath: 'trendingVideos.loading'
+          }
         }
-        store.dispatch(updateMyRatingForVideo(id, newRating));
       }
 
-      _likeClass(myRating, rating) {
-        return myRating == rating ? 'highlight' : '';
+      computeVideos(videos, trendingIds) {
+        return videos && trendingIds && trendingIds.map(id => videos[id]);
       }
 
     }

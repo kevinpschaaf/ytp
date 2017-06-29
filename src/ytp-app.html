@@ -481,7 +481,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     // Element helper mixin
 
-    const ReduxHelpers = (superClass, store) => class extends superClass {
+    const ReduxHelpers = window.ReduxHelpers = (superClass, store) => class extends superClass {
       constructor() {
         super();
         // optional

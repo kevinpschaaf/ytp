@@ -43,11 +43,11 @@ function modulifyHTML(file, html) {
     .map(s => s.src ? `import './${s.src}';` : '')
     .join('\n');
   scripts.forEach(s => s.remove());
-  const imports = Array.from(doc.querySelectorAll('link[rel=import],link[rel=lazy-import]'));
+  const imports = Array.from(doc.querySelectorAll('link[rel=import]'));
   importText += '\n' + imports
     .map(i => `import './${i.href}';`)
     .join('\n');
-  imports.forEach(i => {
+  imports.concat(Array.from(doc.querySelectorAll('link[rel=lazy-import]'))).forEach(i => {
     noteModulified(file, i.href);
     i.remove()
   });

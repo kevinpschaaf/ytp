@@ -40,20 +40,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   <script>
     class YtpTrending extends Polymer.Element {
       static get is() { return 'ytp-trending'; }
-
-      constructor() {
-        super();
-        const update = () => this._update(store.getState());
-        store.subscribe(update);
-        update();
-      }
-
-      _update(state) {
-        const {items, loading} = state.trendingVideos;
-        this.videos = items && items.map(key => state.videos[key]);
-        this.loading = loading;
-      }
-
     }
 
     window.customElements.define(YtpTrending.is, YtpTrending);

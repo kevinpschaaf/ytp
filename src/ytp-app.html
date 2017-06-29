@@ -24,7 +24,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="ytp-icons.html">
 
 <link rel="lazy-import" href="ytp-trending.html">
-<link rel="lazy-import" href="ytp-view404.html">
+<link rel="lazy-import" href="ytp-liked.html">
+<link rel="lazy-import" href="ytp-404.html">
 
 <script src="../bower_components/redux/index.js"></script>
 <script src="../bower_components/redux-thunk/index.js"></script>
@@ -105,8 +106,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         </app-header>
 
         <iron-pages selected="[[page]]" attr-for-selected="name" fallback-selection="view404" role="main">
-          <ytp-trending name="trending"></ytp-trending>
-          <ytp-liked name="liked"></ytp-liked>
+          <ytp-trending name="trending" videos="[[trendingVideos]]" loading="[[trendingLoading]]"></ytp-trending>
+          <ytp-liked name="liked" videos="[[likedVideos]]" loading="[[likedLoading]]" signed-in="[[signedIn]]"></ytp-liked>
           <ytp-view404 name="view404"></ytp-view404>
         </iron-pages>
       </app-header-layout>
@@ -131,6 +132,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         likedVideos: likedVideos(state.likedVideos, action)
       };
     }, {}, Redux.applyMiddleware(ReduxThunk.default));
+
+    // For debugging
+    window.store = store;
 
     // Reducers ---------------------
 
@@ -475,26 +479,55 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       }
     }
 
-    class MyApp extends Polymer.Element {
+    // Element helper mixin
+
+    const ReduxHelpers = (superClass, store) => class extends superClass {
+      constructor() {
+        super();
+        // optional
+        if (store) {
+          this.addEventListener('action', e => store.dispatch(e.detail));
+          const update = () => this._updateState(store.getState());
+          store.subscribe(update);
+          update();
+        }
+      }
+      dispatchAction(action) {
+        this.dispatchEvent(new CustomEvent('action', {
+          bubbles: true,
+          composed: true,
+          cancelable: true,
+          detail: action
+        }));
+      }
+      // abstract
+      _updateState() {}
+    }
+
+    class MyApp extends ReduxHelpers(Polymer.Element, store) {
 
       static get is() { return 'ytp-app'; }
 
       constructor() {
         super();
-        const update = () => this._update(store.getState());
-        store.subscribe(update);
-        update();
-        store.dispatch(loadSDK());
+        this.dispatchAction(loadSDK());
       }
 
-      _update(state) {
+      _updateState(state) {
         this.signedIn = state.signedIn;
         this.toastInfo = state.toastInfo;
         this.page = state.currentPage;
+        const videos = state.videos;
+        const trending = state.trendingVideos.items;
+        this.trendingVideos = trending && trending.map(key => videos[key]);
+        this.trendingLoading = state.trendingVideos.loading;
+        const liked = state.likedVideos.items;
+        this.likedVideos = liked && liked.map(key => videos[key]);
+        this.likedLoading = state.likedVideos.loading;
       }
 
       _handleRoute(e) {
-        store.dispatch(changeRoute(e.detail.value.path));
+        this.dispatchAction(changeRoute(e.detail.value.path));
       }
 
       _loginIcon(signedIn) {
@@ -502,7 +535,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       }
 
       _toggleLogin() {
-        store.dispatch(toggleLogin());
+        this.dispatchAction(toggleLogin());
       }
 
     }

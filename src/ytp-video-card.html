@@ -55,7 +55,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   </template>
 
   <script>
-    class YtpVideoCard extends Polymer.Element {
+    class YtpVideoCard extends ReduxHelpers(Polymer.Element) {
       static get is() { return 'ytp-video-card'; }
 
       _updateMyRating(e) {
@@ -68,7 +68,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         } else {
           newRating = 'none';
         }
-        store.dispatch(updateMyRatingForVideo(id, newRating));
+        this.dispatchAction(updateMyRatingForVideo(id, newRating));
       }
 
       _likeClass(myRating, rating) {

@@ -44,22 +44,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   </template>
 
   <script>
-    class YtpLiked extends Polymer.Element {
+    class YtpLiked extends ReduxHelpers(Polymer.Element) {
       static get is() { return 'ytp-liked'; }
-
-      constructor() {
-        super();
-        const update = () => this._update(store.getState());
-        store.subscribe(update);
-        update();
-      }
-
-      _update(state) {
-        const {items, loading} = state.likedVideos;
-        this.videos = items && items.map(key => state.videos[key]);
-        this.loading = loading;
-        this.signedIn = state.signedIn;
-      }
 
       _isLoading(signedIn, loading) {
         return signedIn == null || loading;
@@ -70,7 +56,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       }
 
       _signin() {
-        store.dispatch(toggleLogin());
+        this.dispatchAction(toggleLogin());
       }
 
     }

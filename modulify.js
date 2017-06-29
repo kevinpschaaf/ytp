@@ -11,6 +11,7 @@ const modulifiedSet = new Set();
 
 function noteModulified(baseFile, file) {
   if (file) {
+    debug && console.log('noting modulified', file);
     const impt = path.normalize(path.join(path.dirname(baseFile), file));
     modulifiedSet.add(impt);
     return true;
@@ -69,13 +70,16 @@ function modulifyHTML(file, html) {
   return content;
 }
 
-const importRegex = /\s*import\s+['"]([^'"]+\.html)['"]/g;
+const moduleRegex = /(^|\n)\s*(import|export)\s/g;
+const importRegex = /\s*(?:\/\/@)?import\s+['"]([^'"]+\.html)['"]/g;
 
 function modulifyJS(file, data) {
-  if (modulifiedSet.has(path.normalize(file))) {
-    return `(function() {\n${data}\n}).call(window);`
+  if (modulifiedSet.has(path.normalize(file)) || !data.toString().match(moduleRegex)) {
+    console.warn('wrapping legacy script', file);
+    return `(function() {\n${data}\n}).call((function(){ try{return window;} catch(e) {return this;} })());`
   } else {
     let matched;
+    debug && console.log('checking for imports', file);
     while (matched = importRegex.exec(data)) {
       noteModulified(file, matched[1]);
     };

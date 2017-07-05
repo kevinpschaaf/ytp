@@ -89,14 +89,14 @@ function modulifyJS(file, data) {
 
 // app.use('/', express.static(__dirname));
 
-app.get(/.*\.js/, function(req, res) {
+app.get(/.*\.js($|\?)/, function(req, res) {
   fs.readFile(path.join(__dirname, req.path), (err, data) => {
     res.contentType('application/javascript');
     res.send(modulifyJS(req.path, data));
   });
 });
 
-app.get(/.*\.html/, function(req, res) {
+app.get(/.*\.html($|\?)/, function(req, res) {
   const file = path.join(__dirname, req.path);
   if (modulifiedSet.has(path.normalize(req.path))) {
     fs.readFile(file, (err, data) => {

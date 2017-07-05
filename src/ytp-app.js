@@ -30,15 +30,33 @@ import {ReduxHelpers} from './redux-helpers.js';
 import {showToastFor} from './redux-actions-toast.js';
 import {setMyRatingForVideo} from './redux-actions-ratings.js';
 
-function importHref(href, onload, onerror) {
-  let s = document.createElement('script');
-  let remove = _ => s.parentNode.removeChild(s);
-  s.type = 'module';
-  s.src = href;
-  s.onload = _ => {remove(); onload();};
-  s.onerror = _ => {remove(); onerror(); console.warn('Error loading lazy import; ensure you have a <link rel="lazy-import"> for this file:', href)};
-  document.head.appendChild(s);
+function importScript(href, onload, onerror) {
+  return importModule(href, onload, onerror, true, 'application/javascript');
+}
+
+function importModule(href, onload, onerror, async, type) {
+  return new Promise((resolve, reject) => {
+    let s = document.createElement('script');
+    let remove = _ => s.parentNode.removeChild(s);
+    s.type = type || 'module';
+    s.src = href;
+    s.onload = _ => {
+      remove();
+      onload && onload();
+      resolve();
+    }
+    s.onerror = _ => {
+      remove();
+      onerror && onerror();
+      console.warn('Error loading lazy import; ensure you have a <link rel="lazy-import"> for this file:', href);
+      reject();
+    };
+    document.head.appendChild(s);
+  });
 };
+
+// const compose = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || Redux.compose;
+const compose = Redux.compose;
 
 const store = Redux.createStore((state, action) => {
   return {
@@ -50,7 +68,7 @@ const store = Redux.createStore((state, action) => {
     trendingVideos: trendingVideos(state.trendingVideos, action),
     likedVideos: likedVideos(state.likedVideos, action)
   };
-}, {}, Redux.applyMiddleware(ReduxThunk.default));
+}, {}, compose(Redux.applyMiddleware(ReduxThunk.default)));
 
 // For debugging
 window.store = store;
@@ -143,12 +161,9 @@ function likedVideos(likedVideos = {}, action) {
 let sdkLoaded;
 function loadSDK() {
   return dispatch => {
-    sdkLoaded = new Promise(resolve => {
-      var script = document.createElement('script');
-      script.async = true;
-      script.src = 'https://apis.google.com/js/api.js';
-      document.head.appendChild(script);
-      script.onload = () => {
+    // sdkLoaded = importScript('../mock/api.js').then(() => {
+    sdkLoaded = importScript('https://apis.google.com/js/api.js').then(() => {
+      return new Promise(resolve => {
         gapi.load('client:auth2', () => {
           gapi.client.init({
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'],
@@ -160,7 +175,7 @@ function loadSDK() {
             resolve();
           });
         });
-      }
+      });
     });
   }
 }
@@ -222,7 +237,7 @@ function loadPage(page) {
         store.dispatch(fetchLikedVideos());
         break;
     }
-    importHref('/src/ytp-' + page + '.js',
+    importModule('/src/ytp-' + page + '.js',
       _ => dispatch(changePage(page)),
       _ => dispatch(loadPage('404')), true);
   }

@@ -91,8 +91,13 @@ function modulifyJS(file, data) {
 
 app.get(/.*\.js($|\?)/, function(req, res) {
   fs.readFile(path.join(__dirname, req.path), (err, data) => {
-    res.contentType('application/javascript');
-    res.send(modulifyJS(req.path, data));
+    if (!err) {
+      res.contentType('application/javascript');
+      res.send(modulifyJS(req.path, data));
+    } else {
+      res.statusCode = err.status || 500;
+      res.end(err.message);
+    }
   });
 });
 
@@ -100,8 +105,13 @@ app.get(/.*\.html($|\?)/, function(req, res) {
   const file = path.join(__dirname, req.path);
   if (modulifiedSet.has(path.normalize(req.path))) {
     fs.readFile(file, (err, data) => {
-      res.contentType('application/javascript');
-      res.send(modulifyHTML(req.path, data));
+      if (!err) {
+        res.contentType('application/javascript');
+        res.send(modulifyHTML(req.path, data));
+      } else {
+        res.statusCode = err.status || 500;
+        res.end(err.message);
+      }
     });
   } else {
     debug && console.log('passing thru html:', file);

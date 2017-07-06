@@ -27,55 +27,29 @@ import './../bower_components/redux/index.js';
 import './../bower_components/redux-thunk/index.js';
 
 import {ReduxHelpers} from './redux-helpers.js';
-import {showToastFor} from './redux-actions-toast.js';
-import {setMyRatingForVideo} from './redux-actions-ratings.js';
 
-function importScript(href, onload, onerror) {
-  return importModule(href, onload, onerror, true, 'application/javascript');
-}
-
-function importModule(href, onload, onerror, async, type) {
-  return new Promise((resolve, reject) => {
-    let s = document.createElement('script');
-    let remove = _ => s.parentNode.removeChild(s);
-    s.type = type || 'module';
-    s.src = href;
-    s.onload = _ => {
-      remove();
-      onload && onload();
-      resolve();
-    }
-    s.onerror = _ => {
-      remove();
-      onerror && onerror();
-      console.warn('Error loading lazy import; ensure you have a <link rel="lazy-import"> for this file:', href);
-      reject();
-    };
-    document.head.appendChild(s);
-  });
-};
+import {loadSDK} from './redux-actions-login.js';
+import {changeRoute} from './redux-actions-routing.js';
 
 // const compose = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || Redux.compose;
 const compose = Redux.compose;
 
-const store = Redux.createStore((state, action) => {
-  return {
-    currentPage: currentPage(state.currentPage, action),
-    signedIn: signedIn(state.signedIn, action),
-    toastInfo: toastInfo(state.toastInfo, action),
-    user: user(state.user, action),
-    videos: videos(state.videos, action),
-    trendingVideos: trendingVideos(state.trendingVideos, action),
-    likedVideos: likedVideos(state.likedVideos, action)
-  };
-}, {}, compose(Redux.applyMiddleware(ReduxThunk.default)));
+const store = Redux.createStore(Redux.combineReducers({
+  currentPage,
+  signedIn,
+  toastInfo,
+  user,
+  videos,
+  trendingVideos,
+  likedVideos
+}), {}, compose(Redux.applyMiddleware(ReduxThunk.default)));
 
 // For debugging
 window.store = store;
 
 // Reducers ---------------------
 
-function currentPage(page, action) {
+function currentPage(page = null, action) {
   switch (action.type) {
     case 'CHANGE_PAGE':
       return action.page;
@@ -84,7 +58,7 @@ function currentPage(page, action) {
   }
 }
 
-function user(user, action) {
+function user(user = null, action) {
   switch (action.type) {
     case 'SET_USER':
       return action.user;
@@ -134,7 +108,6 @@ function trendingVideos(trendingVideos = {}, action) {
       return trendingVideos;
   }
 }
-
 function likedVideos(likedVideos = {}, action) {
   switch (action.type) {
     case 'LIKED_VIDEOS_SET':
@@ -157,211 +130,6 @@ function likedVideos(likedVideos = {}, action) {
 }
 
 // Action creators ---------------------
-
-let sdkLoaded;
-function loadSDK() {
-  return dispatch => {
-    // sdkLoaded = importScript('../mock/api.js').then(() => {
-    sdkLoaded = importScript('https://apis.google.com/js/api.js').then(() => {
-      return new Promise(resolve => {
-        gapi.load('client:auth2', () => {
-          gapi.client.init({
-            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'],
-            clientId: '249918536085-sfdbm43fnsp7sd0s7gjqvvf9tjel691v.apps.googleusercontent.com',
-            scope: 'https://www.googleapis.com/auth/youtube'
-          }).then(() => {
-            gapi.auth2.getAuthInstance().isSignedIn.listen(s => dispatch(setSignedIn(s)));
-            dispatch(setSignedIn(gapi.auth2.getAuthInstance().isSignedIn.get()));
-            resolve();
-          });
-        });
-      });
-    });
-  }
-}
-
-function setSignedIn(signedIn) {
-  return (dispatch, getState) => {
-    const prevSignedIn = getState().signedIn;
-    dispatch({ type: 'SET_SIGNED_IN', signedIn });
-    if (signedIn) {
-      dispatch(refreshSignedInState());
-      gapi.client.youtube.channels.list({'part': 'snippet', 'mine': 'true'}).execute(resp => {
-        if (resp.error) {
-          dispatch(showToastFor(resp.error.message, 1000));
-        } else {
-          const user = resp.items[0].snippet;
-          dispatch(setUser(user));
-          dispatch(showToastFor(`Logged in as ${user.title}.`, 1000));
-        }
-      });
-    } else {
-      if (prevSignedIn) {
-        dispatch(showToastFor(`Logged out.`, 1000));
-        dispatch(setLikedVideos([]));
-        dispatch(setUser(null));
-      }
-    }
-  }
-}
-
-function refreshSignedInState() {
-  return (dispatch, getState) => {
-    const state = getState();
-    switch (state.currentPage) {
-      case 'liked':
-        dispatch(fetchLikedVideos());
-        break;
-    }
-  }
-}
-
-function changeRoute(path) {
-  return (dispatch, getState) => {
-    const state = getState();
-    const parts = path.slice(1).split('/');
-    const [page] = parts;
-    if (page !== state.currentPage) {
-      dispatch(loadPage(page || 'trending'));
-    }
-  }
-}
-
-function loadPage(page) {
-  return (dispatch, getState) => {
-    switch(page) {
-      case 'trending':
-        store.dispatch(fetchTrendingVideos());
-        break;
-      case 'liked':
-        store.dispatch(fetchLikedVideos());
-        break;
-    }
-    importModule('/src/ytp-' + page + '.js',
-      _ => dispatch(changePage(page)),
-      _ => dispatch(loadPage('404')), true);
-  }
-}
-
-function changePage(page) {
-  return { type: 'CHANGE_PAGE', page };
-}
-
-function setUser(user) {
-  return { type: 'SET_USER', user };
-}
-
-function fetchTrendingVideos() {
-  return (dispatch, getState) => {
-    const v = getState().trendingVideos;
-    if (!v.items && !v.loading) {
-      sdkLoaded.then(_ => {
-        dispatch(setTrendingVideosLoading(true));
-        gapi.client.request({
-         path: '/youtube/v3/videos',
-         params: {
-           chart: 'mostPopular',
-           regionCode: 'US',
-           part: 'snippet,contentDetails,statistics',
-           videoCategoryId: '',
-           maxResults: 30
-         }
-        }).execute(resp => {
-          if (resp.error) {
-            dispatch(showToastFor(resp.error.message, 1000));
-          } else {
-            dispatch(setTrendingVideosLoading(false));
-            dispatch(setTrendingVideos(resp.items));
-            resp.items.forEach(v => dispatch(fetchMyRatingForVideo(v.id)));
-          }
-        });
-      });
-    }
-  }
-}
-
-function fetchLikedVideos() {
-  return (dispatch, getState) => {
-    const state = getState();
-    const v = state.likedVideos;
-    if (state.signedIn && !v.items && !v.loading) {
-      sdkLoaded.then(_ => {
-        dispatch(setLikedVideosLoading(true));
-        gapi.client.request({
-         path: '/youtube/v3/videos',
-         params: {
-           myRating: 'like',
-           regionCode: 'US',
-           part: 'snippet,contentDetails,statistics',
-           videoCategoryId: '',
-           maxResults: 30
-         }
-        }).execute(resp => {
-          if (resp.error) {
-            dispatch(showToastFor(resp.error.message, 1000));
-          } else {
-            dispatch(setLikedVideosLoading(false));
-            dispatch(setLikedVideos(resp.items));
-            resp.items.forEach(v => dispatch(fetchMyRatingForVideo(v.id)));
-          }
-        });
-      });
-    }
-  }
-}
-
-function setLikedVideos(items) {
-  return dispatch => {
-    dispatch(addVideos(items));
-    dispatch({
-      type: 'LIKED_VIDEOS_SET',
-      items: items.map(v => v.id)
-    });
-  }
-}
-
-function setLikedVideosLoading(loading) {
-  return { type: 'LIKED_VIDEOS_LOADING_SET', loading }
-}
-
-function fetchMyRatingForVideo(id) {
-  return (dispatch, getState) => {
-    const v = getState().trendingVideos.items;
-    gapi.client.request({
-     path: '/youtube/v3/videos/getRating',
-     params: {
-       id: id
-     }
-    }).execute(resp => {
-      if (resp.error) {
-        dispatch(showToastFor(resp.error.message, 1000));
-      } else {
-        dispatch(setMyRatingForVideo(id, resp.items[0].rating));
-      }
-    });
-  }
-}
-
-function setTrendingVideosLoading(loading) {
-  return { type: 'TRENDING_VIDEOS_LOADING_SET', loading }
-}
-
-function setTrendingVideos(items) {
-  return dispatch => {
-    dispatch(addVideos(items));
-    dispatch({
-      type: 'TRENDING_VIDEOS_SET',
-      items: items.map(v => v.id)
-    });
-  }
-}
-
-function addVideos(items) {
-  return {
-    type: 'VIDEOS_ADD',
-    items: items.reduce((p,n) => { return p[n.id] = n, p}, {})
-  }
-}
 
 class MyApp extends ReduxHelpers(Polymer.Element, store) {
 

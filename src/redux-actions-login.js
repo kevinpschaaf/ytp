@@ -8,6 +8,73 @@
  * subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
  */
 
+import {importScript} from './utils-import.js';
+import {showToastFor} from './redux-actions-toast.js';
+import {fetchLikedVideos} from './redux-actions-videos-liked.js';
+
+let sdkLoadedPromise;
+
+export function sdkLoaded() {
+  return sdkLoadedPromise;
+}
+
+export function loadSDK() {
+  return dispatch => {
+    // sdkLoadedPromise = importScript('../mock/api.js').then(() => {
+    sdkLoadedPromise = importScript('https://apis.google.com/js/api.js').then(() => {
+      return new Promise(resolve => {
+        gapi.load('client:auth2', () => {
+          gapi.client.init({
+            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'],
+            clientId: '249918536085-sfdbm43fnsp7sd0s7gjqvvf9tjel691v.apps.googleusercontent.com',
+            scope: 'https://www.googleapis.com/auth/youtube'
+          }).then(() => {
+            gapi.auth2.getAuthInstance().isSignedIn.listen(s => dispatch(setSignedIn(s)));
+            dispatch(setSignedIn(gapi.auth2.getAuthInstance().isSignedIn.get()));
+            resolve();
+          });
+        });
+      });
+    });
+  }
+}
+
+function setSignedIn(signedIn) {
+  return (dispatch, getState) => {
+    const prevSignedIn = getState().signedIn;
+    dispatch({ type: 'SET_SIGNED_IN', signedIn });
+    if (signedIn) {
+      dispatch(refreshSignedInState());
+      gapi.client.youtube.channels.list({'part': 'snippet', 'mine': 'true'}).execute(resp => {
+        if (resp.error) {
+          dispatch(showToastFor(resp.error.message, 1000));
+        } else {
+          const user = resp.items[0].snippet;
+          dispatch(setUser(user));
+          dispatch(showToastFor(`Logged in as ${user.title}.`, 1000));
+        }
+      });
+    } else {
+      if (prevSignedIn) {
+        dispatch(showToastFor(`Logged out.`, 1000));
+        dispatch(setLikedVideos([]));
+        dispatch(setUser(null));
+      }
+    }
+  }
+}
+
+function refreshSignedInState() {
+  return (dispatch, getState) => {
+    const state = getState();
+    switch (state.currentPage) {
+      case 'liked':
+        dispatch(fetchLikedVideos());
+        break;
+    }
+  }
+}
+
 export function toggleLogin() {
   return (dispatch, getState) => {
     if (window.gapi) {
@@ -18,4 +85,8 @@ export function toggleLogin() {
       }
     }
   }
+}
+
+function setUser(user) {
+  return { type: 'SET_USER', user };
 }

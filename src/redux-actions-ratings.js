@@ -10,6 +10,24 @@
 
 import {showToastFor} from './redux-actions-toast.js';
 
+export function fetchMyRatingForVideo(id) {
+  return (dispatch, getState) => {
+    const v = getState().trendingVideos.items;
+    gapi.client.request({
+     path: '/youtube/v3/videos/getRating',
+     params: {
+       id: id
+     }
+    }).execute(resp => {
+      if (resp.error) {
+        dispatch(showToastFor(resp.error.message, 1000));
+      } else {
+        dispatch(setMyRatingForVideo(id, resp.items[0].rating));
+      }
+    });
+  }
+}
+
 export function updateMyRatingForVideo(id, rating) {
   return (dispatch, getState) => {
     // optimistic
@@ -29,6 +47,6 @@ export function updateMyRatingForVideo(id, rating) {
   }
 }
 
-export function setMyRatingForVideo(id, myRating) {
+function setMyRatingForVideo(id, myRating) {
   return { type: 'VIDEO_MY_RATING_SET', id, myRating}
 }

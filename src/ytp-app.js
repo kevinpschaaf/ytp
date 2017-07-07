@@ -26,110 +26,23 @@ import './ytp-icons.html';
 import './../bower_components/redux/index.js';
 import './../bower_components/redux-thunk/index.js';
 
-import {ReduxHelpers} from './redux-helpers.js';
+import {ReduxHelpers, lazyReducerEnhancer} from './redux-helpers.js';
 
-import {loadSDK} from './redux-actions-login.js';
+import {user, signedIn} from './redux-reducer-login.js';
+import {currentPage} from './redux-reducer-routing.js';
+import {toastInfo} from './redux-reducer-toast.js';
+
+import {loadSDK, toggleLogin} from './redux-actions-login.js';
 import {changeRoute} from './redux-actions-routing.js';
 
 // const compose = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || Redux.compose;
 const compose = Redux.compose;
 
-const store = Redux.createStore(Redux.combineReducers({
-  currentPage,
-  signedIn,
-  toastInfo,
-  user,
-  videos,
-  trendingVideos,
-  likedVideos
-}), {}, compose(Redux.applyMiddleware(ReduxThunk.default)));
+const store = Redux.createStore(() => { return {}; }, {},
+  compose(lazyReducerEnhancer, Redux.applyMiddleware(ReduxThunk.default)));
 
 // For debugging
 window.store = store;
-
-// Reducers ---------------------
-
-function currentPage(page = null, action) {
-  switch (action.type) {
-    case 'CHANGE_PAGE':
-      return action.page;
-    default:
-      return page;
-  }
-}
-
-function user(user = null, action) {
-  switch (action.type) {
-    case 'SET_USER':
-      return action.user;
-    default:
-      return user;
-  }
-}
-
-function signedIn(signedIn = null, action) {
-  switch (action.type) {
-    case 'SET_SIGNED_IN':
-      return action.signedIn;
-    default:
-      return signedIn;
-  }
-}
-
-function toastInfo(info = {showing: false, text: ''}, action) {
-  switch (action.type) {
-    case 'SHOW_TOAST':
-      return {...info, showing: true, text: action.text}
-    case 'HIDE_TOAST':
-      return {...info, showing: false}
-    default:
-      return info;
-  }
-}
-
-function videos(videos = {}, action) {
-  switch (action.type) {
-    case 'VIDEOS_ADD':
-      return {...videos, ...action.items};
-    case 'VIDEO_MY_RATING_SET':
-      return {...videos, [action.id]: {...videos[action.id], myRating: action.myRating}}
-    default:
-      return videos;
-  }
-}
-
-function trendingVideos(trendingVideos = {}, action) {
-  switch (action.type) {
-    case 'TRENDING_VIDEOS_SET':
-      return {...trendingVideos, items: action.items};
-    case 'TRENDING_VIDEOS_LOADING_SET':
-      return {...trendingVideos, loading: action.loading};
-    default:
-      return trendingVideos;
-  }
-}
-function likedVideos(likedVideos = {}, action) {
-  switch (action.type) {
-    case 'LIKED_VIDEOS_SET':
-      return {...likedVideos, items: action.items};
-    case 'LIKED_VIDEOS_LOADING_SET':
-      return {...likedVideos, loading: action.loading};
-    case 'VIDEO_MY_RATING_SET':
-      const {items} = likedVideos;
-      const idx = items && items.indexOf(action.id);
-      if (idx >= 0 && action.myRating != 'like') {
-        return {...likedVideos, items: [...items.slice(0,idx), ...items.slice(idx+1)]};
-      } else if (idx < 0 && action.myRating == 'like') {
-        return {...likedVideos, items: items.concat([action.id])};
-      } else {
-        return likedVideos;
-      }
-    default:
-      return likedVideos;
-  }
-}
-
-// Action creators ---------------------
 
 class MyApp extends ReduxHelpers(Polymer.Element, store) {
 
@@ -194,6 +107,9 @@ class MyApp extends ReduxHelpers(Polymer.Element, store) {
           <a name="liked" href="liked">
             <iron-icon icon="ytp:thumb-up"></iron-icon>Liked Videos
           </a>
+          <a name="profile" href="profile">
+            <iron-icon icon="ytp:person"></iron-icon>Profile
+          </a>
         </iron-selector>
       </app-drawer>
 
@@ -211,7 +127,8 @@ class MyApp extends ReduxHelpers(Polymer.Element, store) {
         <iron-pages selected="[[page]]" attr-for-selected="name" fallback-selection="view404" role="main">
           <ytp-trending name="trending" videos="[[trendingVideos]]" loading="[[trendingLoading]]"></ytp-trending>
           <ytp-liked name="liked" videos="[[likedVideos]]" loading="[[likedLoading]]" signed-in="[[signedIn]]"></ytp-liked>
-          <ytp-view404 name="view404"></ytp-view404>
+          <ytp-profile name="profile" user="[[user]]"></ytp-profile>
+          <ytp-404 name="404"></ytp-404>
         </iron-pages>
       </app-header-layout>
     </app-drawer-layout>
@@ -219,26 +136,31 @@ class MyApp extends ReduxHelpers(Polymer.Element, store) {
     <paper-toast opened="[[toastInfo.showing]]" text="[[toastInfo.text]]" duration="0"></paper-toast>`;
   }
 
-  constructor() {
-    super();
+  ready() {
+    super.ready();
+    this.registerReducers({ currentPage, user, signedIn, toastInfo });
     this.dispatchAction(loadSDK());
   }
 
   _updateState(state) {
-    this.signedIn = state.signedIn;
-    this.toastInfo = state.toastInfo;
-    this.page = state.currentPage;
     const videos = state.videos;
-    const trending = state.trendingVideos.items;
-    this.trendingVideos = trending && trending.map(key => videos[key]);
-    this.trendingLoading = state.trendingVideos.loading;
-    const liked = state.likedVideos.items;
-    this.likedVideos = liked && liked.map(key => videos[key]);
-    this.likedLoading = state.likedVideos.loading;
+    const trendingItems = state.trendingVideos && state.trendingVideos.items;
+    const likedItems = state.likedVideos && state.likedVideos.items;
+    this.setProperties({
+      signedIn: state.signedIn,
+      user: state.user,
+      toastInfo: state.toastInfo,
+      page: state.currentPage,
+      videos: state.videos,
+      trendingVideos: trendingItems && trendingItems.map(key => videos[key]),
+      trendingLoading: state.trendingVideos && state.trendingVideos.loading,
+      likedVideos: likedItems && likedItems.map(key => videos[key]),
+      likedLoading: state.likedVideos && state.likedVideos.loading
+    });
   }
 
   _handleRoute(e) {
-    this.dispatchAction(changeRoute(e.detail.value.path));
+    this.dispatchAction(changeRoute(e.detail.value.path, store));
   }
 
   _loginIcon(signedIn) {

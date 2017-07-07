@@ -2,16 +2,28 @@ export function importScript(href, onload, onerror) {
   return importModule(href, onload, onerror, true, 'application/javascript');
 }
 
+let importGuid = 0;
+const ims = window.__$importModules$ = new Map();
+
 export function importModule(href, onload, onerror, async, type) {
   return new Promise((resolve, reject) => {
-    let s = document.createElement('script');
-    let remove = _ => s.parentNode.removeChild(s);
+    const s = document.createElement('script');
+    const remove = _ => s.parentNode.removeChild(s);
+    const guid = importGuid++;
     s.type = type || 'module';
-    s.src = href;
+    if (s.type == 'module') {
+      s.textContent = `
+        import * as module from '${href}';
+        window.__$importModules$.set(${guid}, module);`;
+    } else {
+      s.src = href;
+    }
     s.onload = _ => {
       remove();
       onload && onload();
-      resolve();
+      let module = ims.get(guid);
+      ims.delete(guid);
+      resolve(module);
     }
     s.onerror = _ => {
       remove();

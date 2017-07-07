@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
+const compression = require('compression');
 const { JSDOM, VirtualConsole } = require('jsdom');
 
 const app = express();
@@ -87,6 +88,7 @@ function modulifyJS(file, data) {
   }
 }
 
+app.use(compression());
 // app.use('/', express.static(__dirname));
 
 app.get(/.*\.js($|\?)/, function(req, res) {

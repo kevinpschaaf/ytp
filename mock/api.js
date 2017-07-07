@@ -13,6 +13,9 @@
     }
   }
 
+  let authListeners = [];
+  let signedIn = true;
+
   window.gapi = {
     load(x, cb) {
       Promise.resolve().then(cb);
@@ -61,8 +64,16 @@
       getAuthInstance() {
         return {
           isSignedIn: {
-            get() { return true; },
-            listen() {}
+            get() { return signedIn; },
+            listen(cb) { authListeners.push(cb); }
+          },
+          signOut() {
+            signedIn = false;
+            Promise.resolve().then(_=>authListeners.forEach(cb => cb(signedIn)));
+          },
+          signIn() {
+            signedIn = true;
+            Promise.resolve().then(_=>authListeners.forEach(cb => cb(signedIn)));
           }
         }
       }

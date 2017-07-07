@@ -20,8 +20,8 @@ export function fetchLikedVideos() {
            maxResults: 30
          }
         }).execute(resp => {
-          if (resp.error) {
-            dispatch(showToastFor(resp.error.message, 1000));
+          if (!resp || resp.error) {
+            dispatch(showToastFor(resp ? resp.error.message : 'Unknown error', 1000));
           } else {
             dispatch(setLikedVideosLoading(false));
             dispatch(setLikedVideos(resp.items));

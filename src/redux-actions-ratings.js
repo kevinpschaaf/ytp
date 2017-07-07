@@ -12,7 +12,6 @@ import {showToastFor} from './redux-actions-toast.js';
 
 export function fetchMyRatingForVideo(id) {
   return (dispatch, getState) => {
-    const v = getState().trendingVideos.items;
     gapi.client.request({
      path: '/youtube/v3/videos/getRating',
      params: {

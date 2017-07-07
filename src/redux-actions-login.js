@@ -8,9 +8,8 @@
  * subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
  */
 
-import {importScript} from './utils-import.js';
+import {importScript, importModule} from './utils-import.js';
 import {showToastFor} from './redux-actions-toast.js';
-import {fetchLikedVideos} from './redux-actions-videos-liked.js';
 
 let sdkLoadedPromise;
 
@@ -46,8 +45,8 @@ function setSignedIn(signedIn) {
     if (signedIn) {
       dispatch(refreshSignedInState());
       gapi.client.youtube.channels.list({'part': 'snippet', 'mine': 'true'}).execute(resp => {
-        if (resp.error) {
-          dispatch(showToastFor(resp.error.message, 1000));
+        if (!resp || resp.error) {
+          dispatch(showToastFor(resp ? resp.error.message : 'Unknown error', 1000));
         } else {
           const user = resp.items[0].snippet;
           dispatch(setUser(user));
@@ -57,7 +56,6 @@ function setSignedIn(signedIn) {
     } else {
       if (prevSignedIn) {
         dispatch(showToastFor(`Logged out.`, 1000));
-        dispatch(setLikedVideos([]));
         dispatch(setUser(null));
       }
     }
@@ -69,7 +67,9 @@ function refreshSignedInState() {
     const state = getState();
     switch (state.currentPage) {
       case 'liked':
-        dispatch(fetchLikedVideos());
+        importModule('./src/redux-actions-videos-liked.js').then(({fetchLikedVideos}) => {
+          dispatch(fetchLikedVideos());
+        });
         break;
     }
   }

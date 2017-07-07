@@ -14,7 +14,11 @@ import './../bower_components/paper-spinner/paper-spinner-lite.html';
 
 import './ytp-video-card.js';
 
-class YtpTrending extends Polymer.Element {
+import {ReduxHelpers} from './redux-helpers.js';
+import {fetchTrendingVideos} from './redux-actions-videos-trending.js';
+import {trendingVideos} from './redux-reducer-videos-trending.js';
+
+class YtpTrending extends ReduxHelpers(Polymer.Element) {
 
   static get template() { return `
     <style>
@@ -36,6 +40,7 @@ class YtpTrending extends Polymer.Element {
       <ytp-video-card video="[[video]]"></ytp-video-card>
     </template>`;
   }
+
 }
 
 customElements.define('ytp-trending', YtpTrending);

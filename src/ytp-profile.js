@@ -10,9 +10,9 @@
 
 import './../bower_components/polymer/polymer-element.html';
 
-class Ytp404 extends Polymer.Element {
+class YtpProfile extends Polymer.Element {
 
-  static get is() { return 'ytp-404'; }
+  static get is() { return 'ytp-profile'; }
 
   static get template() { return `
     <style>
@@ -22,9 +22,8 @@ class Ytp404 extends Polymer.Element {
         padding: 10px 20px;
       }
     </style>
-    Oops you hit a 404. <a href="[[rootPath]]">Head back to home.</a>`;
+    User: [[user.title]]`;
   }
-  
 }
 
-customElements.define(Ytp404.is, Ytp404);
+customElements.define(YtpProfile.is, YtpProfile);

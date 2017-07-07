@@ -15,7 +15,10 @@ import './../bower_components/paper-spinner/paper-spinner-lite.html';
 
 import './ytp-video-card.js';
 
-import {ReduxHelpers} from './redux-helpers.js'
+import {ReduxHelpers} from './redux-helpers.js';
+import {toggleLogin} from './redux-actions-login.js';
+import {fetchLikedVideos} from './redux-actions-videos-liked.js';
+import {likedVideos} from './redux-reducer-videos-liked.js';
 
 class YtpLiked extends ReduxHelpers(Polymer.Element) {
 

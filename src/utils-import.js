@@ -14,16 +14,19 @@ export function importModule(href, onload, onerror, async, type) {
     if (s.type == 'module') {
       s.textContent = `
         import * as module from '${href}';
-        window.__$importModules$.set(${guid}, module);`;
+        let script = window.__$importModules$.get(${guid});
+        script.module = module;
+        script.dispatchEvent(new CustomEvent('load'));`
     } else {
       s.src = href;
     }
+    ims.set(guid, s);
     s.onload = _ => {
       remove();
       onload && onload();
-      let module = ims.get(guid);
+      s.onload = null;
       ims.delete(guid);
-      resolve(module);
+      resolve(s.module);
     }
     s.onerror = _ => {
       remove();

@@ -10,42 +10,47 @@
 
 import {showToastFor} from './redux-actions-toast.js';
 
-export function fetchMyRatingForVideo(id) {
-  return (dispatch, getState) => {
+function fetchRating(id) {
+  return new Promise((resolve, reject) => {
     gapi.client.request({
      path: '/youtube/v3/videos/getRating',
-     params: {
-       id: id
-     }
+     params: { id }
     }).execute(resp => {
       if (resp.error) {
-        dispatch(showToastFor(resp.error.message, 1000));
+        reject(resp.error);
       } else {
-        dispatch(setMyRatingForVideo(id, resp.items[0].rating));
+        const r = resp.items[0];
+        resolve({id: r.videoId, myRating: r.rating});
       }
+    });
+  });
+}
+
+export function fetchMyRatingsForVideos(videos) {
+  return (dispatch, getState) => {
+    Promise.all(videos.map(v => fetchRating(v.id))).then(ratings => {
+      dispatch({ type: 'VIDEO_RATINGS_RECEIVED', ratings});
+    }).catch(error => {
+      dispatch(showToastFor(error.message, 5000));
     });
   }
 }
 
-export function updateMyRatingForVideo(id, rating) {
+export function updateMyRatingForVideo(id, myRating) {
   return (dispatch, getState) => {
     // optimistic
-    dispatch(setMyRatingForVideo(id, rating));
+    dispatch({ type: 'VIDEO_RATING_CHANGED', id, myRating});
     gapi.client.request({
      method: 'POST',
      path: '/youtube/v3/videos/rate',
      params: {id, rating}
     }).execute(resp => {
       if (resp && resp.error) {
-        dispatch(showToastFor(resp.error.message, 1000));
+        dispatch(showToastFor(resp.error.message, 5000));
       } else {
         // pessimistic
-        // dispatch(setMyRatingForVideo(id, rating));
+        // dispatch({ type: 'VIDEO_RATING_CHANGED', id, myRating});
       }
     });
   }
-}
-
-function setMyRatingForVideo(id, myRating) {
-  return { type: 'VIDEO_MY_RATING_SET', id, myRating}
 }

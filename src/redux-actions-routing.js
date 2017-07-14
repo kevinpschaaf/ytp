@@ -42,5 +42,5 @@ function loadPage(page, store) {
 }
 
 function changePage(page) {
-  return { type: 'CHANGE_PAGE', page };
+  return { type: 'PAGE_CHANGED', page };
 }

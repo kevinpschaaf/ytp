@@ -1,8 +1,8 @@
 export function toastInfo(info = {showing: false, text: ''}, action) {
   switch (action.type) {
-    case 'SHOW_TOAST':
+    case 'TOAST_REQUESTED':
       return {...info, showing: true, text: action.text}
-    case 'HIDE_TOAST':
+    case 'TOAST_DISMISSED':
       return {...info, showing: false}
     default:
       return info;

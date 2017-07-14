@@ -18,7 +18,7 @@ export const ReduxHelpers = (superClass, store) => class extends superClass {
         store.addReducers(e.detail);
       });
       this.addEventListener('action', e => store.dispatch(e.detail));
-      const update = () => this._updateState(store.getState());
+      const update = () => this.setProperties(this._mapStateToProps(store.getState()));
       store.subscribe(update);
       update();
     }
@@ -33,17 +33,8 @@ export const ReduxHelpers = (superClass, store) => class extends superClass {
     }));
   }
 
-  registerReducers(reducers) {
-    this.dispatchEvent(new CustomEvent('register-reducers', {
-      bubbles: true,
-      composed: true,
-      cancelable: true,
-      detail: reducers
-    }));
-  }
-
   // abstract, called when optional store parameter passed
-  _updateState() {}
+  _mapStateToProps() {}
 
 }
 

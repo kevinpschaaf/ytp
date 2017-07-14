@@ -41,22 +41,21 @@ export function loadSDK() {
 function setSignedIn(signedIn) {
   return (dispatch, getState) => {
     const prevSignedIn = getState().signedIn;
-    dispatch({ type: 'SET_SIGNED_IN', signedIn });
     if (signedIn) {
       dispatch(refreshSignedInState());
       gapi.client.youtube.channels.list({'part': 'snippet', 'mine': 'true'}).execute(resp => {
         if (!resp || resp.error) {
-          dispatch(showToastFor(resp ? resp.error.message : 'Unknown error', 1000));
+          dispatch(showToastFor(resp ? resp.error.message : 'Unknown error', 5000));
         } else {
           const user = resp.items[0].snippet;
-          dispatch(setUser(user));
+          dispatch({type: 'USER_LOGGED_IN', user});
           dispatch(showToastFor(`Logged in as ${user.title}.`, 1000));
         }
       });
     } else {
       if (prevSignedIn) {
         dispatch(showToastFor(`Logged out.`, 1000));
-        dispatch(setUser(null));
+          dispatch({type: 'USER_LOGGED_OUT'});
       }
     }
   }
@@ -85,8 +84,4 @@ export function toggleLogin() {
       }
     }
   }
-}
-
-function setUser(user) {
-  return { type: 'SET_USER', user };
 }

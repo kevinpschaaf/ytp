@@ -35,11 +35,13 @@ import {toastInfo} from './redux-reducer-toast.js';
 import {loadSDK, toggleLogin} from './redux-actions-login.js';
 import {changeRoute} from './redux-actions-routing.js';
 
-// const compose = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || Redux.compose;
-const compose = Redux.compose;
+const compose = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || Redux.compose;
+// const compose = Redux.compose;
 
-const store = Redux.createStore(() => { return {}; }, {},
+const store = Redux.createStore((state, action) => { return {}; }, {},
   compose(lazyReducerEnhancer, Redux.applyMiddleware(ReduxThunk.default)));
+
+store.addReducers({ currentPage, user, signedIn, toastInfo });
 
 // For debugging
 window.store = store;
@@ -138,15 +140,14 @@ class MyApp extends ReduxHelpers(Polymer.Element, store) {
 
   ready() {
     super.ready();
-    this.registerReducers({ currentPage, user, signedIn, toastInfo });
     this.dispatchAction(loadSDK());
   }
 
-  _updateState(state) {
+  _mapStateToProps(state) {
     const videos = state.videos;
     const trendingItems = state.trendingVideos && state.trendingVideos.items;
     const likedItems = state.likedVideos && state.likedVideos.items;
-    this.setProperties({
+    return {
       signedIn: state.signedIn,
       user: state.user,
       toastInfo: state.toastInfo,
@@ -156,7 +157,7 @@ class MyApp extends ReduxHelpers(Polymer.Element, store) {
       trendingLoading: state.trendingVideos && state.trendingVideos.loading,
       likedVideos: likedItems && likedItems.map(key => videos[key]),
       likedLoading: state.likedVideos && state.likedVideos.loading
-    });
+    };
   }
 
   _handleRoute(e) {

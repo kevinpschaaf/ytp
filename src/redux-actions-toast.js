@@ -8,17 +8,10 @@
  * subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
  */
 
-export function showToast(text) {
-  return { type: 'SHOW_TOAST', text };
-}
-
-export function hideToast() {
-  return { type: 'HIDE_TOAST' };
-}
 
 export function showToastFor(text, duration) {
   return dispatch => {
-    dispatch(showToast(text));
-    setTimeout(() => dispatch(hideToast()), duration);
+    dispatch({ type: 'TOAST_REQUESTED', text });
+    setTimeout(() => dispatch({ type: 'TOAST_DISMISSED' }), duration);
   }
 }

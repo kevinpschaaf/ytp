@@ -1,10 +1,10 @@
 export function likedVideos(likedVideos = {}, action) {
   switch (action.type) {
-    case 'LIKED_VIDEOS_SET':
-      return {...likedVideos, items: action.items};
-    case 'LIKED_VIDEOS_LOADING_SET':
-      return {...likedVideos, loading: action.loading};
-    case 'VIDEO_MY_RATING_SET':
+    case 'LIKED_VIDEOS_REQUESTED':
+      return {...likedVideos, loading: true};
+    case 'LIKED_VIDEOS_RECEIVED':
+      return {...likedVideos, loading: false, items: action.items.map(i => i.id)};
+    case 'VIDEO_RATING_CHANGED':
       const {items} = likedVideos;
       const idx = items && items.indexOf(action.id);
       if (idx >= 0 && action.myRating != 'like') {
@@ -14,8 +14,8 @@ export function likedVideos(likedVideos = {}, action) {
       } else {
         return likedVideos;
       }
-    case 'SET_USER':
-      return action.user ? likedVideos : [];
+    case 'USER_LOGGED_OUT':
+      return [];
     default:
       return likedVideos;
   }

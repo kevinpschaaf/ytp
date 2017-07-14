@@ -1,7 +1,8 @@
 export function user(user = null, action) {
   switch (action.type) {
-    case 'SET_USER':
-      return action.user;
+    case 'USER_LOGGED_OUT':
+    case 'USER_LOGGED_IN':
+      return action.user || null;
     default:
       return user;
   }
@@ -9,8 +10,9 @@ export function user(user = null, action) {
 
 export function signedIn(signedIn = null, action) {
   switch (action.type) {
-    case 'SET_SIGNED_IN':
-      return action.signedIn;
+    case 'USER_LOGGED_IN':
+    case 'USER_LOGGED_OUT':
+      return Boolean(action.user);
     default:
       return signedIn;
   }
